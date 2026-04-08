@@ -273,6 +273,7 @@ class AIS_Data_Manager {
 		$claude_report      = ! empty( $audit_data['agent_reports']['claude_auditor'] ) && is_array( $audit_data['agent_reports']['claude_auditor'] ) ? (array) $audit_data['agent_reports']['claude_auditor'] : array();
 		$claude_summary     = ! empty( $claude_report['summary'] ) ? sanitize_text_field( (string) $claude_report['summary'] ) : '';
 		$claude_warnings    = ! empty( $claude_report['warnings'] ) && is_array( $claude_report['warnings'] ) ? $claude_report['warnings'] : array();
+		$focus_keyword      = $this->extract_focus_keyword( $audit_data );
 
 		return array(
 			'suggestion_id'      => (int) $row['id'],
@@ -285,6 +286,7 @@ class AIS_Data_Manager {
 			'provider'           => ! empty( $audit_data['provider'] ) ? sanitize_text_field( (string) $audit_data['provider'] ) : '',
 			'confidence_score'   => $confidence_score,
 			'recommended_action' => $recommended_action,
+			'focus_keyword'      => $focus_keyword,
 			'claude_summary'     => $claude_summary,
 			'claude_warnings'    => $claude_warnings,
 			'audit_table'        => ! empty( $audit_data['audit_table'] ) && is_array( $audit_data['audit_table'] ) ? $audit_data['audit_table'] : array(),
@@ -441,6 +443,41 @@ class AIS_Data_Manager {
 	}
 
 	/**
+	 * Extracts the best available focus keyword from audit payload.
+	 *
+	 * @param array<string,mixed> $audit_data Audit payload.
+	 * @return string
+	 */
+	private function extract_focus_keyword( $audit_data ) {
+		if ( ! is_array( $audit_data ) ) {
+			return '';
+		}
+
+		$candidates = array(
+			$audit_data['focus_keyword'] ?? '',
+			$audit_data['target_keyword'] ?? '',
+			$audit_data['primary_keyword'] ?? '',
+			$audit_data['keyword'] ?? '',
+		);
+
+		foreach ( $candidates as $candidate ) {
+			$keyword = sanitize_text_field( (string) $candidate );
+			if ( '' !== $keyword ) {
+				return $keyword;
+			}
+		}
+
+		if ( ! empty( $audit_data['keywords'] ) && is_array( $audit_data['keywords'] ) ) {
+			$first = sanitize_text_field( (string) reset( $audit_data['keywords'] ) );
+			if ( '' !== $first ) {
+				return $first;
+			}
+		}
+
+		return '';
+	}
+
+	/**
 	 * Returns the default empty suggestion payload.
 	 *
 	 * @return array<string,mixed>
@@ -457,6 +494,7 @@ class AIS_Data_Manager {
 			'provider'           => '',
 			'confidence_score'   => 0,
 			'recommended_action' => '',
+			'focus_keyword'      => '',
 			'claude_summary'     => '',
 			'claude_warnings'    => array(),
 			'audit_table'        => array(),

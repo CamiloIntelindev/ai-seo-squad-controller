@@ -129,6 +129,7 @@ class AIS_Ajax_Handler {
 			$post_id      = isset( $_POST['post_id'] ) ? absint( $_POST['post_id'] ) : 0;
 			$suggestions  = $this->data_manager->get_suggestions( $post_id );
 			$meta_excerpt = (string) $suggestions['meta_description'];
+			$focus_keyword = ! empty( $suggestions['focus_keyword'] ) ? sanitize_text_field( (string) $suggestions['focus_keyword'] ) : '';
 
 			if ( empty( $post_id ) || empty( $meta_excerpt ) ) {
 				wp_send_json_error( array( 'message' => __( 'No pending meta description to apply.', 'ai-seo-squad-controller' ) ), 400 );
@@ -146,6 +147,8 @@ class AIS_Ajax_Handler {
 				wp_send_json_error( array( 'message' => $updated->get_error_message() ), 500 );
 			}
 
+			$this->apply_seo_meta_fields( $post_id, $meta_excerpt, $focus_keyword );
+
 			$this->data_manager->clear_suggestions( $post_id );
 			$this->data_manager->mark_adjustment_applied( $post_id, $meta_excerpt );
 
@@ -153,6 +156,7 @@ class AIS_Ajax_Handler {
 				array(
 					'message'            => __( 'AI suggestion applied successfully.', 'ai-seo-squad-controller' ),
 					'adjustment_applied' => true,
+					'focus_keyword'      => $focus_keyword,
 				)
 			);
 		} catch ( \Throwable $exception ) {
@@ -198,5 +202,35 @@ class AIS_Ajax_Handler {
 		}
 
 		return array_values( array_unique( $allowed ) );
+	}
+
+	/**
+	 * Applies SEO plugin meta fields for description and focus keyword.
+	 *
+	 * @param int    $post_id          Post ID.
+	 * @param string $meta_description Meta description.
+	 * @param string $focus_keyword    Focus keyword.
+	 * @return void
+	 */
+	private function apply_seo_meta_fields( $post_id, $meta_description, $focus_keyword ) {
+		$post_id          = absint( $post_id );
+		$meta_description = sanitize_text_field( (string) $meta_description );
+		$focus_keyword    = sanitize_text_field( (string) $focus_keyword );
+
+		if ( empty( $post_id ) || '' === $meta_description ) {
+			return;
+		}
+
+		// Rank Math.
+		update_post_meta( $post_id, 'rank_math_description', $meta_description );
+		if ( '' !== $focus_keyword ) {
+			update_post_meta( $post_id, 'rank_math_focus_keyword', $focus_keyword );
+		}
+
+		// Yoast.
+		update_post_meta( $post_id, '_yoast_wpseo_metadesc', $meta_description );
+		if ( '' !== $focus_keyword ) {
+			update_post_meta( $post_id, '_yoast_wpseo_focuskw', $focus_keyword );
+		}
 	}
 }
