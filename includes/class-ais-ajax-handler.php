@@ -223,10 +223,13 @@ class AIS_Ajax_Handler {
 			return;
 		}
 
+		$meta_description = $this->ensure_keyword_in_text( $meta_description, $focus_keyword );
+
 		// Rank Math.
 		update_post_meta( $post_id, 'rank_math_description', $meta_description );
 		if ( '' !== $focus_keyword ) {
 			update_post_meta( $post_id, 'rank_math_focus_keyword', $focus_keyword );
+			$this->update_seo_title_with_keyword( $post_id, $focus_keyword );
 		}
 
 		// Yoast.
@@ -234,6 +237,67 @@ class AIS_Ajax_Handler {
 		if ( '' !== $focus_keyword ) {
 			update_post_meta( $post_id, '_yoast_wpseo_focuskw', $focus_keyword );
 		}
+	}
+
+	/**
+	 * Ensures focus keyword is present in text, appending if necessary.
+	 *
+	 * @param string $text          Original text.
+	 * @param string $focus_keyword Focus keyword.
+	 * @return string
+	 */
+	private function ensure_keyword_in_text( $text, $focus_keyword ) {
+		if ( '' === $text || '' === $focus_keyword ) {
+			return $text;
+		}
+
+		$text_lower    = strtolower( $text );
+		$keyword_lower = strtolower( $focus_keyword );
+
+		if ( false !== strpos( $text_lower, $keyword_lower ) ) {
+			return $text;
+		}
+
+		$text = trim( $text );
+		if ( '.' !== substr( $text, -1 ) && ',' !== substr( $text, -1 ) ) {
+			$text .= '.';
+		}
+
+		$text .= ' ' . $focus_keyword . '.';
+
+		return $text;
+	}
+
+	/**
+	 * Updates Rank Math SEO title to include focus keyword if not present.
+	 *
+	 * @param int    $post_id       Post ID.
+	 * @param string $focus_keyword Focus keyword.
+	 * @return void
+	 */
+	private function update_seo_title_with_keyword( $post_id, $focus_keyword ) {
+		$post_id       = absint( $post_id );
+		$focus_keyword = sanitize_text_field( (string) $focus_keyword );
+
+		if ( empty( $post_id ) || '' === $focus_keyword ) {
+			return;
+		}
+
+		$seo_title = (string) get_post_meta( $post_id, 'rank_math_title', true );
+		if ( '' === $seo_title ) {
+			$seo_title = get_the_title( $post_id );
+		}
+
+		$seo_title_lower = strtolower( $seo_title );
+		$keyword_lower   = strtolower( $focus_keyword );
+
+		if ( false !== strpos( $seo_title_lower, $keyword_lower ) ) {
+			return;
+		}
+
+		$seo_title .= ' - ' . $focus_keyword;
+
+		update_post_meta( $post_id, 'rank_math_title', sanitize_text_field( $seo_title ) );
 	}
 
 	/**
