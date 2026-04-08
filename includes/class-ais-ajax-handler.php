@@ -70,12 +70,13 @@ class AIS_Ajax_Handler {
 			$broken_links       = ! empty( $data['broken_links'] ) && is_array( $data['broken_links'] ) ? $data['broken_links'] : array();
 			$confidence_score   = isset( $data['confidence_score'] ) ? (int) $data['confidence_score'] : 100;
 			$recommended_action = sanitize_text_field( (string) ( $data['recommended_action'] ?? 'apply' ) );
-			$claude_report      = ! empty( $data['agent_reports']['claude_auditor'] ) && is_array( $data['agent_reports']['claude_auditor'] ) ? (array) $data['agent_reports']['claude_auditor'] : array();
-			$claude_summary     = sanitize_text_field( (string) ( $claude_report['summary'] ?? '' ) );
-			$claude_warnings    = ! empty( $claude_report['warnings'] ) && is_array( $claude_report['warnings'] ) ? $claude_report['warnings'] : array();
+			$agent_report       = $this->select_agent_report( $data );
+			$claude_summary     = sanitize_text_field( (string) $agent_report['summary'] );
+			$claude_warnings    = ! empty( $agent_report['warnings'] ) && is_array( $agent_report['warnings'] ) ? $agent_report['warnings'] : array();
 			$has_critical       = ! empty( $broken_links ) || 'review' === $recommended_action;
 			$audit_table        = ! empty( $data['audit_table'] ) && is_array( $data['audit_table'] ) ? $data['audit_table'] : array();
 			$meta_suggestion    = sanitize_text_field( (string) ( $data['meta_description_suggestion'] ?? $meta_description ) );
+			$data['provider']   = sanitize_text_field( (string) $agent_report['provider'] );
 
 			// Keep the previous stored table when the new audit payload has no table rows.
 			if ( empty( $audit_table ) ) {
@@ -106,6 +107,7 @@ class AIS_Ajax_Handler {
 					'has_critical_issues'=> $has_critical,
 					'confidence_score'   => $confidence_score,
 					'recommended_action' => $recommended_action,
+					'provider'           => $data['provider'],
 					'claude_summary'     => $claude_summary,
 					'claude_warnings'    => $claude_warnings,
 					'audit_table'        => $audit_table,
@@ -232,5 +234,48 @@ class AIS_Ajax_Handler {
 		if ( '' !== $focus_keyword ) {
 			update_post_meta( $post_id, '_yoast_wpseo_focuskw', $focus_keyword );
 		}
+	}
+
+	/**
+	 * Selects the best agent report with Claude priority and Gemini fallback.
+	 *
+	 * @param array<string,mixed> $audit_data Audit payload.
+	 * @return array<string,mixed>
+	 */
+	private function select_agent_report( $audit_data ) {
+		$reports = ! empty( $audit_data['agent_reports'] ) && is_array( $audit_data['agent_reports'] ) ? $audit_data['agent_reports'] : array();
+
+		$priority = array(
+			'claude_auditor' => 'claude',
+			'gemini_auditor' => 'gemini',
+		);
+
+		foreach ( $priority as $key => $provider ) {
+			if ( ! empty( $reports[ $key ] ) && is_array( $reports[ $key ] ) ) {
+				$report = (array) $reports[ $key ];
+
+				return array(
+					'provider' => $provider,
+					'summary'  => ! empty( $report['summary'] ) ? (string) $report['summary'] : '',
+					'warnings' => ! empty( $report['warnings'] ) && is_array( $report['warnings'] ) ? $report['warnings'] : array(),
+				);
+			}
+		}
+
+		foreach ( $reports as $key => $report ) {
+			if ( is_array( $report ) ) {
+				return array(
+					'provider' => sanitize_key( (string) $key ),
+					'summary'  => ! empty( $report['summary'] ) ? (string) $report['summary'] : '',
+					'warnings' => ! empty( $report['warnings'] ) && is_array( $report['warnings'] ) ? $report['warnings'] : array(),
+				);
+			}
+		}
+
+		return array(
+			'provider' => '',
+			'summary'  => '',
+			'warnings' => array(),
+		);
 	}
 }

@@ -270,9 +270,9 @@ class AIS_Data_Manager {
 		$has_critical       = $this->has_critical_issues( $audit_data );
 		$confidence_score   = isset( $audit_data['confidence_score'] ) ? (int) $audit_data['confidence_score'] : 0;
 		$recommended_action = ! empty( $audit_data['recommended_action'] ) ? sanitize_text_field( (string) $audit_data['recommended_action'] ) : '';
-		$claude_report      = ! empty( $audit_data['agent_reports']['claude_auditor'] ) && is_array( $audit_data['agent_reports']['claude_auditor'] ) ? (array) $audit_data['agent_reports']['claude_auditor'] : array();
-		$claude_summary     = ! empty( $claude_report['summary'] ) ? sanitize_text_field( (string) $claude_report['summary'] ) : '';
-		$claude_warnings    = ! empty( $claude_report['warnings'] ) && is_array( $claude_report['warnings'] ) ? $claude_report['warnings'] : array();
+		$agent_report       = $this->select_agent_report( $audit_data );
+		$claude_summary     = ! empty( $agent_report['summary'] ) ? sanitize_text_field( (string) $agent_report['summary'] ) : '';
+		$claude_warnings    = ! empty( $agent_report['warnings'] ) && is_array( $agent_report['warnings'] ) ? $agent_report['warnings'] : array();
 		$focus_keyword      = $this->extract_focus_keyword( $audit_data );
 
 		return array(
@@ -283,7 +283,7 @@ class AIS_Data_Manager {
 			'tech_audit_json'    => (string) $row['tech_audit_json'],
 			'broken_links'       => $broken_links,
 			'has_critical_issues'=> $has_critical,
-			'provider'           => ! empty( $audit_data['provider'] ) ? sanitize_text_field( (string) $audit_data['provider'] ) : '',
+			'provider'           => ! empty( $audit_data['provider'] ) ? sanitize_text_field( (string) $audit_data['provider'] ) : (string) $agent_report['provider'],
 			'confidence_score'   => $confidence_score,
 			'recommended_action' => $recommended_action,
 			'focus_keyword'      => $focus_keyword,
@@ -475,6 +475,49 @@ class AIS_Data_Manager {
 		}
 
 		return '';
+	}
+
+	/**
+	 * Selects the best agent report with Claude priority and Gemini fallback.
+	 *
+	 * @param array<string,mixed> $audit_data Audit payload.
+	 * @return array<string,mixed>
+	 */
+	private function select_agent_report( $audit_data ) {
+		$reports = ! empty( $audit_data['agent_reports'] ) && is_array( $audit_data['agent_reports'] ) ? $audit_data['agent_reports'] : array();
+
+		$priority = array(
+			'claude_auditor' => 'claude',
+			'gemini_auditor' => 'gemini',
+		);
+
+		foreach ( $priority as $key => $provider ) {
+			if ( ! empty( $reports[ $key ] ) && is_array( $reports[ $key ] ) ) {
+				$report = (array) $reports[ $key ];
+
+				return array(
+					'provider' => $provider,
+					'summary'  => ! empty( $report['summary'] ) ? (string) $report['summary'] : '',
+					'warnings' => ! empty( $report['warnings'] ) && is_array( $report['warnings'] ) ? $report['warnings'] : array(),
+				);
+			}
+		}
+
+		foreach ( $reports as $key => $report ) {
+			if ( is_array( $report ) ) {
+				return array(
+					'provider' => sanitize_key( (string) $key ),
+					'summary'  => ! empty( $report['summary'] ) ? (string) $report['summary'] : '',
+					'warnings' => ! empty( $report['warnings'] ) && is_array( $report['warnings'] ) ? $report['warnings'] : array(),
+				);
+			}
+		}
+
+		return array(
+			'provider' => '',
+			'summary'  => '',
+			'warnings' => array(),
+		);
 	}
 
 	/**
