@@ -19,7 +19,8 @@ Plugin de WordPress para gestionar y coordinar funcionalidades SEO asistidas por
 
 - Rama principal: `main`.
 - Repositorio: https://github.com/CamiloIntelindev/ai-seo-squad-controller
+- Guia de contribucion: `CONTRIBUTING.md`.
 
 ## Licencia
 
-Pendiente de definir.
+GPL-2.0-or-later. Consulta el archivo `LICENSE`.
