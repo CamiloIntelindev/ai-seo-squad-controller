@@ -193,7 +193,7 @@ class AIS_Admin_Menu {
 								</td>
 								<td class="ais-actions-cell">
 									<button type="button" class="button button-secondary ais-audit-btn"><?php esc_html_e( 'Audit', 'ai-seo-squad-controller' ); ?></button>
-									<button type="button" class="button button-primary ais-apply-btn" <?php disabled( empty( $suggestions['meta_description'] ) || ! empty( $suggestions['has_critical_issues'] ) ); ?>><?php esc_html_e( 'Apply', 'ai-seo-squad-controller' ); ?></button>
+									<button type="button" class="button button-primary ais-apply-btn" <?php disabled( empty( $suggestions['meta_description'] ) ); ?>><?php esc_html_e( 'Apply', 'ai-seo-squad-controller' ); ?></button>
 									<p class="ais-last-update-wrap"><strong><?php esc_html_e( 'Last update:', 'ai-seo-squad-controller' ); ?></strong> <span class="ais-last-update"><?php echo esc_html( $last_update ); ?></span></p>
 								</td>
 							</tr>

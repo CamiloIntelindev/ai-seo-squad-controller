@@ -95,6 +95,8 @@ class AIS_Ajax_Handler {
 				wp_send_json_error( array( 'message' => __( 'Audit completed, but the suggestion could not be stored locally.', 'ai-seo-squad-controller' ) ), 500 );
 			}
 
+			$this->data_manager->reset_adjustment_applied( $post_id );
+
 			wp_send_json_success(
 				array(
 					'meta_description'   => $meta_suggestion,
@@ -107,6 +109,7 @@ class AIS_Ajax_Handler {
 					'claude_summary'     => $claude_summary,
 					'claude_warnings'    => $claude_warnings,
 					'audit_table'        => $audit_table,
+					'adjustment_applied' => false,
 				)
 			);
 		} catch ( \Throwable $exception ) {
@@ -126,14 +129,9 @@ class AIS_Ajax_Handler {
 			$post_id      = isset( $_POST['post_id'] ) ? absint( $_POST['post_id'] ) : 0;
 			$suggestions  = $this->data_manager->get_suggestions( $post_id );
 			$meta_excerpt = (string) $suggestions['meta_description'];
-			$has_critical = ! empty( $suggestions['has_critical_issues'] );
 
 			if ( empty( $post_id ) || empty( $meta_excerpt ) ) {
 				wp_send_json_error( array( 'message' => __( 'No pending meta description to apply.', 'ai-seo-squad-controller' ) ), 400 );
-			}
-
-			if ( $has_critical ) {
-				wp_send_json_error( array( 'message' => __( 'Resolve critical technical issues before applying AI changes.', 'ai-seo-squad-controller' ) ), 400 );
 			}
 
 			$updated = wp_update_post(
@@ -149,10 +147,12 @@ class AIS_Ajax_Handler {
 			}
 
 			$this->data_manager->clear_suggestions( $post_id );
+			$this->data_manager->mark_adjustment_applied( $post_id, $meta_excerpt );
 
 			wp_send_json_success(
 				array(
-					'message' => __( 'AI suggestion applied successfully.', 'ai-seo-squad-controller' ),
+					'message'            => __( 'AI suggestion applied successfully.', 'ai-seo-squad-controller' ),
+					'adjustment_applied' => true,
 				)
 			);
 		} catch ( \Throwable $exception ) {

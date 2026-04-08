@@ -15,6 +15,21 @@ if ( ! defined( 'ABSPATH' ) ) {
 class AIS_Data_Manager {
 
 	/**
+	 * Post meta key: whether latest adjustment was applied.
+	 */
+	const META_ADJUSTMENT_APPLIED = '_ais_adjustment_applied';
+
+	/**
+	 * Post meta key: when latest adjustment was applied.
+	 */
+	const META_ADJUSTMENT_APPLIED_AT = '_ais_adjustment_applied_at';
+
+	/**
+	 * Post meta key: latest applied meta description.
+	 */
+	const META_LAST_APPLIED_DESCRIPTION = '_ais_last_applied_description';
+
+	/**
 	 * Custom table suffix.
 	 */
 	const TABLE_SUFFIX = 'ais_suggestions';
@@ -312,6 +327,41 @@ class AIS_Data_Manager {
 			array( '%s' ),
 			array( '%d', '%s' )
 		);
+	}
+
+	/**
+	 * Marks a post as having AI adjustments applied.
+	 *
+	 * @param int    $post_id          Post ID.
+	 * @param string $meta_description Applied meta description.
+	 * @return void
+	 */
+	public function mark_adjustment_applied( $post_id, $meta_description ) {
+		$post_id = absint( $post_id );
+		if ( empty( $post_id ) ) {
+			return;
+		}
+
+		update_post_meta( $post_id, self::META_ADJUSTMENT_APPLIED, '1' );
+		update_post_meta( $post_id, self::META_ADJUSTMENT_APPLIED_AT, current_time( 'mysql' ) );
+		update_post_meta( $post_id, self::META_LAST_APPLIED_DESCRIPTION, wp_strip_all_tags( (string) $meta_description ) );
+	}
+
+	/**
+	 * Resets applied-adjustment markers after a new audit is stored.
+	 *
+	 * @param int $post_id Post ID.
+	 * @return void
+	 */
+	public function reset_adjustment_applied( $post_id ) {
+		$post_id = absint( $post_id );
+		if ( empty( $post_id ) ) {
+			return;
+		}
+
+		update_post_meta( $post_id, self::META_ADJUSTMENT_APPLIED, '0' );
+		delete_post_meta( $post_id, self::META_ADJUSTMENT_APPLIED_AT );
+		delete_post_meta( $post_id, self::META_LAST_APPLIED_DESCRIPTION );
 	}
 
 	/**

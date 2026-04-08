@@ -75,7 +75,7 @@ jQuery(function ($) {
 			$summary.before('<p><span class="ais-badge ais-badge-critical">' + escapeHtml(aisAjax.i18n.critical) + '</span></p>');
 		}
 
-		$applyButton.prop('disabled', hasCriticalIssues || !hasMetaSuggestion);
+		$applyButton.prop('disabled', !hasMetaSuggestion);
 	}
 
 	function setButtonLoading($button, loadingText) {
