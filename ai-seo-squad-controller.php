@@ -25,6 +25,7 @@ require_once AIS_PLUGIN_DIR . 'includes/class-ais-data-manager.php';
 require_once AIS_PLUGIN_DIR . 'includes/class-ais-api-client.php';
 require_once AIS_PLUGIN_DIR . 'includes/class-ais-admin-menu.php';
 require_once AIS_PLUGIN_DIR . 'includes/class-ais-ajax-handler.php';
+require_once AIS_PLUGIN_DIR . 'includes/class-ais-schema-manager.php';
 
 register_activation_hook( AIS_PLUGIN_FILE, array( 'AIS_Data_Manager', 'activate' ) );
 
@@ -62,6 +63,7 @@ final class AIS_Plugin {
 
 		new AIS_Admin_Menu( $data_manager );
 		new AIS_Ajax_Handler( $api_client, $data_manager );
+		new AIS_Schema_Manager();
 	}
 }
 
