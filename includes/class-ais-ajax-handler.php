@@ -149,7 +149,7 @@ class AIS_Ajax_Handler {
 				wp_send_json_error( array( 'message' => $updated->get_error_message() ), 500 );
 			}
 
-			$this->apply_seo_meta_fields( $post_id, $meta_excerpt, $focus_keyword );
+			$focus_keyword = $this->apply_seo_meta_fields( $post_id, $meta_excerpt, $focus_keyword );
 
 			$this->data_manager->clear_suggestions( $post_id );
 			$this->data_manager->mark_adjustment_applied( $post_id, $meta_excerpt );
@@ -218,6 +218,20 @@ class AIS_Ajax_Handler {
 		$post_id          = absint( $post_id );
 		$meta_description = sanitize_text_field( (string) $meta_description );
 		$focus_keyword    = sanitize_text_field( (string) $focus_keyword );
+
+		if ( '' === $focus_keyword ) {
+			$focus_keyword = sanitize_text_field( (string) get_post_meta( $post_id, 'rank_math_focus_keyword', true ) );
+		}
+		if ( '' === $focus_keyword ) {
+			$focus_keyword = sanitize_text_field( (string) get_post_meta( $post_id, '_yoast_wpseo_focuskw', true ) );
+		}
+
+		if ( '' !== $focus_keyword ) {
+			$parts = preg_split( '/[,\n\|]/', $focus_keyword );
+			if ( is_array( $parts ) && ! empty( $parts[0] ) ) {
+				$focus_keyword = sanitize_text_field( trim( (string) $parts[0] ) );
+			}
+		}
 
 		if ( empty( $post_id ) || '' === $meta_description ) {
 			return;
