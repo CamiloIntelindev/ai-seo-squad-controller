@@ -125,15 +125,30 @@ class AIS_Admin_Menu {
 
 		$selected_types   = $this->get_selected_post_types();
 		$date_format      = get_option( 'date_format' ) . ' ' . get_option( 'time_format' );
+		$posts_per_page   = (int) get_option( 'ais_posts_per_page', 50 );
+		$posts_per_page   = $posts_per_page > 0 ? $posts_per_page : 50;
+		$paged            = isset( $_GET['ais_page'] ) ? (int) $_GET['ais_page'] : 1;
+		$paged            = $paged > 0 ? $paged : 1;
+		$offset           = ( $paged - 1 ) * $posts_per_page;
+
 		$posts = get_posts(
 			array(
 				'post_type'      => $selected_types,
 				'post_status'    => 'publish',
 				'orderby'        => 'date',
 				'order'          => 'DESC',
-				'posts_per_page' => 20,
+				'posts_per_page' => $posts_per_page,
+				'offset'         => $offset,
 			)
 		);
+
+		$total_posts = count( get_posts( array(
+			'post_type'      => $selected_types,
+			'post_status'    => 'publish',
+			'numberof'       => -1,
+			'fields'         => 'ids',
+		) ) );
+		$total_pages = ceil( $total_posts / $posts_per_page );
 		?>
 		<div class="wrap ais-wrap">
 			<h1><?php esc_html_e( 'AI SEO Squad Controller', 'ai-seo-squad-controller' ); ?></h1>
@@ -201,6 +216,22 @@ class AIS_Admin_Menu {
 					<?php endif; ?>
 				</tbody>
 			</table>
+
+			<?php if ( $total_pages > 1 ) : ?>
+				<div class="ais-pagination" style="margin-top: 20px; text-align: center;">
+					<?php if ( $paged > 1 ) : ?>
+						<a href="<?php echo esc_url( add_query_arg( 'ais_page', $paged - 1 ) ); ?>" class="button"><?php esc_html_e( '← Previous', 'ai-seo-squad-controller' ); ?></a>
+					<?php endif; ?>
+
+					<span class="ais-pagination-info" style="margin: 0 15px;">
+						<?php printf( esc_html__( 'Page %d of %d', 'ai-seo-squad-controller' ), $paged, $total_pages ); ?>
+					</span>
+
+					<?php if ( $paged < $total_pages ) : ?>
+						<a href="<?php echo esc_url( add_query_arg( 'ais_page', $paged + 1 ) ); ?>" class="button"><?php esc_html_e( 'Next →', 'ai-seo-squad-controller' ); ?></a>
+					<?php endif; ?>
+				</div>
+			<?php endif; ?>
 		</div>
 		<?php
 	}
@@ -256,6 +287,10 @@ class AIS_Admin_Menu {
 		update_option( AIS_API_Client::OPTION_API_PASS, $api_pass );
 		update_option( AIS_API_Client::OPTION_API_TOKEN, $api_token );
 
+		$posts_per_page = isset( $_POST['ais_posts_per_page'] ) ? (int) wp_unslash( $_POST['ais_posts_per_page'] ) : 50;
+		$posts_per_page = max( 10, min( 500, $posts_per_page ) );
+		update_option( 'ais_posts_per_page', $posts_per_page );
+
 		$selected_raw = wp_unslash( $_POST['ais_content_types'] ?? array( 'post' ) );
 		$selected_raw = is_array( $selected_raw ) ? $selected_raw : array( 'post' );
 		$available    = array_keys( $this->get_available_post_types() );
@@ -299,6 +334,7 @@ class AIS_Admin_Menu {
 		$api_token      = (string) get_option( AIS_API_Client::OPTION_API_TOKEN, '' );
 		$available      = $this->get_available_post_types();
 		$selected_types = $this->get_selected_post_types();
+		$posts_per_page = (int) get_option( 'ais_posts_per_page', 50 );
 		?>
 		<form method="post" action="<?php echo esc_url( admin_url( 'admin.php?page=ais-seo-squad-settings' ) ); ?>" class="ais-settings-form">
 			<?php wp_nonce_field( 'ais_save_settings', 'ais_settings_nonce' ); ?>
@@ -336,6 +372,13 @@ class AIS_Admin_Menu {
 							</label>
 						<?php endforeach; ?>
 						<p class="description"><?php esc_html_e( 'Select one or more. The analysis table will include all selected content types.', 'ai-seo-squad-controller' ); ?></p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><label for="ais_posts_per_page"><?php esc_html_e( 'Posts Per Page', 'ai-seo-squad-controller' ); ?></label></th>
+					<td>
+						<input type="number" id="ais_posts_per_page" name="ais_posts_per_page" class="small-text" value="<?php echo esc_attr( $posts_per_page ); ?>" min="10" max="500" />
+						<p class="description"><?php esc_html_e( 'Number of posts to display per page in the Analysis table (10-500).', 'ai-seo-squad-controller' ); ?></p>
 					</td>
 				</tr>
 			</table>
